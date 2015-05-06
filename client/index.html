@@ -11,16 +11,18 @@
     <div id="main">
       <h1>chatterbox</h1>
 
-      <select id="roomSelect" onchange="app.fetch()">
+      <select id="roomSelect" onchange="app.fetchAndRender()">
       </select>
 
       <form id="formMessage">
       <!-- Message:<br> -->
-      <input type="text" name="message" id="chatMsg">
+      <input type="text" name="message">
       <!-- <br> -->
-      <input type="submit" value="Submit" id="inputButton" onClick="app.addMessage(message)">
+      <button type="submit">Send message!</button>
       </form>
-      <div id="chats"></div>
+      <div id="chats">
+        <div id="chatContainer"></div>
+      </div>
 
     </div>
   </body>

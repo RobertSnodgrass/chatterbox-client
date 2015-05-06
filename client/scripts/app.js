@@ -2,60 +2,78 @@ var app = {}
 
 app.init = function() {
   this.rooms = {}
-	this.server = 'https://api.parse.com/1/classes/chatterbox';
+	this.server = 'https://api.parse.com/1/classes/chatterbox?order=-createdAt';
 	this.$roomSelect = $('#roomSelect');
 	this.$chats = $('#chats');
 	this.$formMessage = $('#formMessage');
-	this.fetch()
-  // this.pollMessages()
+  this.pollMessages();
 };
 
-app.send = function(message) {
-	$.ajax({
-		// This is the url you should use to communicate with the parse API server.
-		url: this.server,
-		type: 'POST',
-		data: JSON.stringify(message),
-		contentType: 'application/json',
-		success: function(data) {
-			console.log('chatterbox: Message sent');
-		},
-		error: function(data) {
-			// See: https://developer.mozilla.org/en-US/docs/Web/API/console.error
-			console.error('chatterbox: Failed to send message');
-		}
-	});
+$('#formMessage').on('submit', function (e) {
+  console.log("submitted");
+  e.preventDefault()
+  var messageText = e.currentTarget.message.value
+  console.log("Sending message:", messageText)
+  // Clear the input field
+  e.currentTarget.message.value = ''
+
+  app.createMessage({
+    text: messageText,
+    roomname: app.$roomSelect.val(),
+    username: this.username
+  })
+  .then(app.fetchAndRender)
+})
+
+// .then is similar to using a success method, and catch would replace error  been removed
+
+app.createMessage = function(messageObj) {
+  console.log(messageObj)
+  return $.ajax({
+    url: 'https://api.parse.com/1/classes/chatterbox',
+    type: 'POST',
+    data: JSON.stringify(messageObj),
+    contentType: 'application/json'
+  })
+}
+
+app.fetch = function() {
+  return $.ajax({
+    // This is the url you should use to communicate with the parse API server.
+    url: this.server,
+    type: 'GET',
+    contentType: 'application/json'
+  }).then(function(response) {
+    return response.results;
+  })
 };
 
-app.fetch = function(message) {
-	$.ajax({
-		// This is the url you should use to communicate with the parse API server.
-		url: this.server,
-		type: 'GET',
-		data: JSON.stringify(message),
-		contentType: 'application/json',
-		success: function(data) {
-      // on successful fetch(), delete all child divs of #chats
-      app.clearMessages();
-      // iterate through data from server
-			_.each(data.results, function(item){
-        // populate select dropdown element with rooms
-        app.addRoom(item.roomname);
+app.renderMessages = function(data) {
+  // on successful fetch(), delete all child divs of #chats
+  app.clearMessages();
+  // iterate through data from server
+  _.each(data, function(item) {
+    // populate select dropdown element with rooms
+    app.addRoom(item.roomname);
+    // only add messages of currently selected room
+    var currentRoom = app.$roomSelect.val();
+    // app.addMessage(item.text );
+    if (item.roomname === currentRoom) {
+      app.addMessage(item.text, item.username)
+    }
+  })
+}
 
-        // only add messages of currently selected room
-        var currentRoom = app.$roomSelect.val(); 
-        // app.addMessage(item.text );
-        if (item.roomname === currentRoom) {
-          app.addMessage(item.text, item.username)
-        }
-			})
-		},
-		error: function(data) {
-			// See: https://developer.mozilla.org/en-US/docs/Web/API/console.error
-			console.error('chatterbox: Failed to receive message');
-		}
-	});
-};
+app.fetchAndRender = function() {
+  console.log("refreshing feed")
+  app.fetch().then(app.renderMessages)
+}
+
+app.pollMessages = function() {
+  console.log("fetching...")
+  app.fetchAndRender();
+  setInterval(app.fetchAndRender, 5000)
+}
 
 app.addRoom = function(name) {
   if( app.rooms[name] === undefined ) {
@@ -65,16 +83,11 @@ app.addRoom = function(name) {
 };
 
 app.addMessage = function(message, user) {
-
-	app.$chats.append($('<div></div>').text(user + ": " + message))
-	
+  // break into spans
+  app.$chats.append($('<div></div>').text(user + ": " + message).addClass("chat"))//.attr("class", "chat"))
 };
 
 app.clearMessages = function() {
-	this.$chats.empty()
+  this.$chats.empty()
 }
 
-app.pollMessages = function(data) {
-  console.log("fetching...")
-  setInterval(app.fetch, 5000)
-}
